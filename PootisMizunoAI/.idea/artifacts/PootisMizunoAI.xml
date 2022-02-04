@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="PootisMizunoAI">
+    <output-path>$PROJECT_DIR$/../FightingIDEA/data/ai</output-path>
+    <root id="archive" name="pootisMizunoAI.jar">
+      <element id="module-output" name="pootisMizunoAI" />
+    </root>
+  </artifact>
+</component>
