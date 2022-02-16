@@ -1,5 +1,6 @@
 import aiinterface.AIInterface;
 import aiinterface.CommandCenter;
+import enumerate.Action;
 import enumerate.State;
 import struct.CharacterData;
 import struct.FrameData;
@@ -8,8 +9,8 @@ import struct.Key;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-
-import static enumerate.Action.STAND;
+import java.util.EnumSet;
+import java.util.LinkedList;
 
 public class pootisMizunoAI implements AIInterface {
 
@@ -18,6 +19,14 @@ public class pootisMizunoAI implements AIInterface {
     private FrameData frameData;
     private CommandCenter cc;
     private GameData gameData;
+    private int characterStates;
+
+    private double kThreshhold = 0.3;
+    private int Threshold = 3;
+    private int kDistance = 50;
+
+    Deque<Action> oppActs;
+    int checkAct[];
 
     CharacterData oppData;
     CharacterData myData;
@@ -36,9 +45,11 @@ public class pootisMizunoAI implements AIInterface {
         this.gameData = gameData;
         cc = new CommandCenter();
         oppActAA = new ArrayDeque<ActData>();
-        oppActAG = new ArrayDeque<ActData>();;
-        oppActGG = new ArrayDeque<ActData>();;
-        oppActGA = new ArrayDeque<ActData>();;
+        oppActAG = new ArrayDeque<ActData>();
+        oppActGG = new ArrayDeque<ActData>();
+        oppActGA = new ArrayDeque<ActData>();
+        checkAct = new int[EnumSet.allOf(Action.class).size()];
+        this.oppActs = new LinkedList<Action>();
 
 
         return 0;
@@ -50,6 +61,7 @@ public class pootisMizunoAI implements AIInterface {
         cc.setFrameData(frameData, playerNumber);
         oppData = frameData.getCharacter(true);
         myData = frameData.getCharacter(false);
+
 
 
     }
@@ -72,7 +84,10 @@ public class pootisMizunoAI implements AIInterface {
                     collectData();
 
                 }
-                else if(oppData.getAttack().getAttackType() == 1){
+                if(characterStates > 0){
+                    decideAction();
+                }
+                /*else if(oppData.getAttack().getAttackType() == 1){
                     System.out.println("Opponent threw a HIGH attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
                     System.out.println(oppData.getState());
                 }
@@ -110,7 +125,7 @@ public class pootisMizunoAI implements AIInterface {
                     //cc.commandCall("6");
                     //inputKey = cc.getSkillKey();
 
-                }
+                }*/
             }
         }
     }
@@ -129,11 +144,15 @@ public class pootisMizunoAI implements AIInterface {
     public void roundEnd(int p1HP, int p2HP, int frames) {
         int numOfAttacks = oppActGG.size() + oppActAA.size() + oppActAG.size() + oppActGA.size();
         System.out.println("Opponent threw " + numOfAttacks + " attacks this round");
+        for (ActData act :
+                oppActGG) {
+            System.out.println(act.getAct());
+        }
 
     }
 
-    public void collectData() {
-        int characterStates = checkPosition();
+    private void collectData() {
+        characterStates = checkPosition();
         System.out.println("State of players " + characterStates);
         switch(characterStates) {
             case 1:
@@ -152,6 +171,42 @@ public class pootisMizunoAI implements AIInterface {
                 break;
         }
 
+
+    }
+
+    private void decideAction() {
+        int relativeX = frameData.getDistanceX();
+        int relativeY = frameData.getDistanceY();
+
+        Deque<ActData> actData = null;
+        switch(characterStates) {
+            case 1:
+                actData = oppActGG;
+                break;
+            case 2:
+                actData = oppActGA;
+                break;
+
+            case 3:
+                actData = oppActAG;
+                break;
+
+            case 4:
+                actData = oppActAA;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + characterStates);
+        }
+        int count = 0;
+        System.out.println("actdata is of size " + actData.size());
+        /*for (int i = 0; i < actData.size(); i++){
+
+
+        }*/
+        boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
+        System.out.println("Is Opponent Going To Attack");
+
+        System.out.println("OppActs size: " + oppActs.size());
 
     }
 
@@ -180,7 +235,93 @@ public class pootisMizunoAI implements AIInterface {
         return -1;
     }
 
-    public void add() {
+    public boolean calculateDist(Deque<ActData> actData, int relativeX, int relativeY) {
+        int actdataThreshold = (int)(actData.size() * kThreshhold + 1);
+        Deque<ActData> temp = new LinkedList<ActData>();
+        ActData[] actArr;
+        for (ActData actDataI :
+                actData) {
+            ActData act = new ActData(actDataI);
+            if (myData.isFront()) {
+                act.setDistance((int) Math.sqrt(Math.pow((act.getX() + relativeX), 2) + Math.pow((act.getY() + relativeY), 2)));
+            }
+            else{
+                act.setDistance((int) Math.sqrt(Math.pow((act.getX() - relativeX), 2) + Math.pow((act.getY() - relativeY), 2)));
+            }
+            if(act.getDistance() < kDistance){
+                temp.add(act);
+            }
+
+
+        }
+        if(temp.size() < Math.min(actdataThreshold, Threshold)){
+            return false;
+
+        }
+        //actArr might be uninitalized
+        actArr = arrSort((ActData[]) temp.toArray());
+
+        organizeOppActs(actArr, Math.min(actdataThreshold, Threshold));
+
+        return true;
+
+    }
+    private ActData[] arrSort(ActData[] actArr){
+        mergeSort(actArr);
+        return actArr;
+    }
+
+    private void mergeSort(ActData[] actArr){
+        if(actArr.length > 1){
+            int left = actArr.length / 2;
+            int right = actArr.length - left;
+            ActData[] arrLeft = new ActData[left];
+            ActData[] arrRight = new ActData[right];
+            for(int i = 0; i < left; i++){
+                arrLeft[i] = new ActData(actArr[i]);
+            }
+            for(int i = 0; i < right; i++) {
+                arrRight[i] = new ActData(actArr[left + i]);
+            }
+            mergeSort(arrLeft);
+            mergeSort(arrRight);
+            merge(arrLeft, arrRight, actArr);
+
+        }
+    }
+
+    private void merge(ActData[] arrLeft, ActData[] arrRight, ActData[] actArr){
+        int i = 0;
+        int j = 0;
+        while(i < arrLeft.length || j < arrRight.length){
+            if(j >= arrRight.length || (i <arrLeft.length && arrLeft[i].getDistance() < arrRight[j].getDistance())){
+                actArr[i + j].setActData(arrLeft[i]);
+                i++;
+            }
+            else {
+                actArr[i + j].setActData(arrRight[j]);
+                j++;
+            }
+        }
+    }
+
+    private void organizeOppActs(ActData[] actArr, int threshold) {
+        Action[] actionArr = Action.values();
+        int frequentActionIndex = 1;
+        for(int i = 0; i < threshold; i++){
+            checkAct[actArr[i].getAct().ordinal()]++;
+        }
+
+        for(int i = 0; i < EnumSet.allOf(Action.class).size(); i++){
+            if(checkAct[i] > frequentActionIndex){
+                oppActs.clear();
+                oppActs.add(actionArr[i]);
+                frequentActionIndex = checkAct[i];
+            }
+            else if(checkAct[i] == frequentActionIndex){
+                oppActs.add(actionArr[i]);
+            }
+        }
 
     }
     private boolean canProcessing() {

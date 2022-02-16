@@ -2,18 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6d2b4860-525b-4cb6-989d-4d5876621609" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/$PRODUCT_WORKSPACE_FILE$" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/PootisMizunoAI.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AIToolKit.jar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/META-INF/MANIFEST.MF" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/out/production/PootisMizunoAI/pootisMizunoAI.class" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pootisMizunoAI.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ActData.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/pootisMizunoAI.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/PootisMizunoAI/ActData.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/PootisMizunoAI/ActData.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/PootisMizunoAI/pootisMizunoAI.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/PootisMizunoAI/pootisMizunoAI.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ActData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ActData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pootisMizunoAI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/pootisMizunoAI.java" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -68,7 +61,11 @@
       <workItem from="1644243154689" duration="4239000" />
       <workItem from="1644334324325" duration="611000" />
       <workItem from="1644406137731" duration="2127000" />
-      <workItem from="1644587573037" duration="6885000" />
+      <workItem from="1644587573037" duration="7905000" />
+      <workItem from="1644841075248" duration="3827000" />
+      <workItem from="1644848725611" duration="6887000" />
+      <workItem from="1644938493316" duration="3893000" />
+      <workItem from="1645022292383" duration="6676000" />
     </task>
     <servers />
   </component>
@@ -80,7 +77,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>
