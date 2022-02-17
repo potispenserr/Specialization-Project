@@ -69,24 +69,22 @@ public class pootisMizunoAI implements AIInterface {
     @Override
     public void processing() {
         if(canProcessing()) {
-            if(cc.getSkillFlag()) {
+            if (cc.getSkillFlag()) {
                 inputKey = cc.getSkillKey();
                 //System.out.println(inputKey);
-            }
-            else {
-                inputKey.empty();
-                cc.skillCancel();
+            } else {
+                if (myData.isControl() || myData.getRemainingFrame() <= 0) {
+                    characterStates = checkPosition();
+                    Action action = Action.CROUCH_GUARD;
 
-                //cc.commandCall("B");
-                //System.out.println(oppData.getAction().toString());
-                if(oppData.getAttack().getAttackType() > 0){
-                    System.out.println("adding an attack to the memory bank");
-                    collectData();
+                    //cc.commandCall("B");
+                    //System.out.println(oppData.getAction().toString());
+                    if (oppData.getAttack().getAttackType() > 0) {
+                        System.out.println("adding an attack to the memory bank");
+                        collectData();
 
-                }
-                if(characterStates > 0){
+                    }
                     decideAction();
-                }
                 /*else if(oppData.getAttack().getAttackType() == 1){
                     System.out.println("Opponent threw a HIGH attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
                     System.out.println(oppData.getState());
@@ -126,6 +124,12 @@ public class pootisMizunoAI implements AIInterface {
                     //inputKey = cc.getSkillKey();
 
                 }*/
+
+
+                    cc.commandCall(action.name());
+                    inputKey = cc.getSkillKey();
+
+                }
             }
         }
     }
@@ -152,7 +156,7 @@ public class pootisMizunoAI implements AIInterface {
     }
 
     private void collectData() {
-        characterStates = checkPosition();
+
         System.out.println("State of players " + characterStates);
         switch(characterStates) {
             case 1:
@@ -195,18 +199,22 @@ public class pootisMizunoAI implements AIInterface {
                 actData = oppActAA;
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + characterStates);
+                System.out.println("UNEXPECTED VALUE " + characterStates);
+                return;
         }
         int count = 0;
-        System.out.println("actdata is of size " + actData.size());
+        if(actData.size() != 0){
+            System.out.println("actdata is of size " + actData.size());
         /*for (int i = 0; i < actData.size(); i++){
 
 
         }*/
-        boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
-        System.out.println("Is Opponent Going To Attack");
+            boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
+            System.out.println("Is Opponent Going To Attack");
 
-        System.out.println("OppActs size: " + oppActs.size());
+            System.out.println("OppActs size: " + oppActs.size());
+        }
+
 
     }
 
@@ -216,12 +224,11 @@ public class pootisMizunoAI implements AIInterface {
      * @return returns 1 if both characters is on the ground, 2 if the player is on the ground and opponent in the air, 3 if player is in the air and opponent on the ground and 4 if both are in the air
      */
     public int checkPosition() {
-        System.out.println(myData.getState().equals(State.STAND));
-        if(myData.getState().equals(State.STAND) && oppData.getState().equals(State.STAND)){
+        if(myData.getState().equals(State.STAND) || myData.getState().equals(State.STAND) && oppData.getState().equals(State.STAND) || oppData.getState().equals(State.STAND)){
             return 1;
         }
 
-        if(myData.getState().equals(State.STAND) && oppData.getState().equals(State.AIR)){
+        if(myData.getState().equals(State.STAND) || myData.getState().equals(State.CROUCH) && oppData.getState().equals(State.AIR)){
             return 2;
         }
 
@@ -232,6 +239,7 @@ public class pootisMizunoAI implements AIInterface {
         if(myData.getState().equals(State.AIR) && oppData.getState().equals(State.AIR)){
             return 4;
         }
+        System.out.println("AI state is " + myData.getState() + " Player state is " + oppData.getState());
         return -1;
     }
 
@@ -259,7 +267,14 @@ public class pootisMizunoAI implements AIInterface {
 
         }
         //actArr might be uninitalized
-        actArr = arrSort((ActData[]) temp.toArray());
+        ActData[] tempArr = new ActData[temp.size()];
+        for(int i = 0; i < temp.size(); i++){
+            tempArr[i] = temp.pop();
+        }
+
+        System.out.println("temoArr is " + tempArr.length);
+
+        actArr = arrSort((ActData[]) tempArr);
 
         organizeOppActs(actArr, Math.min(actdataThreshold, Threshold));
 
@@ -272,6 +287,7 @@ public class pootisMizunoAI implements AIInterface {
     }
 
     private void mergeSort(ActData[] actArr){
+
         if(actArr.length > 1){
             int left = actArr.length / 2;
             int right = actArr.length - left;
@@ -280,8 +296,10 @@ public class pootisMizunoAI implements AIInterface {
             for(int i = 0; i < left; i++){
                 arrLeft[i] = new ActData(actArr[i]);
             }
+            System.out.println("Size of arrRight " + arrRight.length);
             for(int i = 0; i < right; i++) {
-                arrRight[i] = new ActData(actArr[left + i]);
+                System.out.println("index: " + (left + i - 1));
+                arrRight[i] = new ActData(actArr[left + i - 1]);
             }
             mergeSort(arrLeft);
             mergeSort(arrRight);
