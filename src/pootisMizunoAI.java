@@ -7,10 +7,7 @@ import struct.FrameData;
 import struct.GameData;
 import struct.Key;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.LinkedList;
+import java.util.*;
 
 public class pootisMizunoAI implements AIInterface {
 
@@ -22,11 +19,14 @@ public class pootisMizunoAI implements AIInterface {
     private int characterStates;
 
     private double kThreshhold = 0.3;
-    private int Threshold = 3;
+    private int distThreshold = 3;
     private int kDistance = 50;
 
-    Deque<Action> oppActs;
-    int checkAct[];
+    private int attackCounter = 0;
+
+    Deque<Action> predictedOppActs;
+    int[] actionFreqArr;
+    int[] actsOccuringFrequency;
 
     CharacterData oppData;
     CharacterData myData;
@@ -48,8 +48,8 @@ public class pootisMizunoAI implements AIInterface {
         oppActAG = new ArrayDeque<ActData>();
         oppActGG = new ArrayDeque<ActData>();
         oppActGA = new ArrayDeque<ActData>();
-        checkAct = new int[EnumSet.allOf(Action.class).size()];
-        this.oppActs = new LinkedList<Action>();
+        actionFreqArr = new int[EnumSet.allOf(Action.class).size()];
+        this.predictedOppActs = new LinkedList<Action>();
 
 
         return 0;
@@ -79,10 +79,27 @@ public class pootisMizunoAI implements AIInterface {
 
                     //cc.commandCall("B");
                     //System.out.println(oppData.getAction().toString());
-                    if (oppData.getAttack().getAttackType() > 0) {
-                        System.out.println("adding an attack to the memory bank");
-                        collectData();
+                    /*if (oppData.getAttack().getAttackType() > 0) {
+                        if(attackCounter == 0){
+                            System.out.println("adding an attack to the memory bank");
+                            collectData();
+                            attackCounter++;
+                        }
+                        else{
+                            if(attackCounter < 3){
+                                attackCounter++;
+                                System.out.println("skipping duplicate attack");
+                            }
+                            else if(attackCounter == 3){
+                                System.out.println("skipping final duplicate and restting counter");
+                                attackCounter = 0;
 
+                            }
+                        }
+
+                    }*/
+                    if (oppData.getAttack().getAttackType() > 0) {
+                        collectData();
                     }
                     decideAction();
                 /*else if(oppData.getAttack().getAttackType() == 1){
@@ -160,17 +177,22 @@ public class pootisMizunoAI implements AIInterface {
         System.out.println("State of players " + characterStates);
         switch(characterStates) {
             case 1:
+                System.out.println("Saving " + oppData.getAction() + " at X: " + frameData.getDistanceX() + " Y: " + frameData.getDistanceY() + " in oppActGG");
                 oppActGG.add(new ActData(frameData.getDistanceX(), frameData.getDistanceY(), oppData.getAction()));
+                System.out.println("Size of oppActGG " + oppActGG.size());
                 break;
             case 2:
+                System.out.println("Saving " + oppData.getAction() + " at X: " + frameData.getDistanceX() + " Y: " + frameData.getDistanceY() + " in oppActGA");
                 oppActGA.add(new ActData(frameData.getDistanceX(), frameData.getDistanceY(), oppData.getAction()));
                 break;
 
             case 3:
+                System.out.println("Saving " + oppData.getAction() + " at X: " + frameData.getDistanceX() + " Y: " + frameData.getDistanceY() + " in oppActAG");
                 oppActAG.add(new ActData(frameData.getDistanceX(), frameData.getDistanceY(), oppData.getAction()));
                 break;
 
             case 4:
+                System.out.println("Saving " + oppData.getAction() + " at X: " + frameData.getDistanceX() + " Y: " + frameData.getDistanceY() + " in oppActAA");
                 oppActAA.add(new ActData(frameData.getDistanceX(), frameData.getDistanceY(), oppData.getAction()));
                 break;
         }
@@ -210,9 +232,8 @@ public class pootisMizunoAI implements AIInterface {
 
         }*/
             boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
-            System.out.println("Is Opponent Going To Attack");
-
-            System.out.println("OppActs size: " + oppActs.size());
+            System.out.println("Is Opponent Going To Attack? " + isOpponentGoingToAttack);
+            System.out.println("OppActs size: " + predictedOppActs.size());
         }
 
 
@@ -262,84 +283,107 @@ public class pootisMizunoAI implements AIInterface {
 
 
         }
-        if(temp.size() < Math.min(actdataThreshold, Threshold)){
+        if(temp.size() < Math.min(actdataThreshold, distThreshold)){
             return false;
 
         }
-        //actArr might be uninitalized
-        ActData[] tempArr = new ActData[temp.size()];
-        for(int i = 0; i < temp.size(); i++){
-            tempArr[i] = temp.pop();
+
+        for (ActData act :
+                temp) {
+            System.out.println("Action: " + act.getAct() + " X: " + act.getX());
         }
 
-        System.out.println("temoArr is " + tempArr.length);
 
-        actArr = arrSort((ActData[]) tempArr);
 
-        organizeOppActs(actArr, Math.min(actdataThreshold, Threshold));
+        for (ActData act :
+                actData) {
+            System.out.println("ACtdata Action: "+ act.getAct() + " actdata X: " + act.getX());
+
+        }
+
+        actArr = arrSort(temp);
+
+        predictActsKNN(actArr, Math.min(actdataThreshold, distThreshold));
 
         return true;
 
     }
-    private ActData[] arrSort(ActData[] actArr){
-        mergeSort(actArr);
+    private ActData[] arrSort(Deque<ActData> actData){
+        //moved this from calculateDist() and it miraculously worked
+        ActData[] actArr = new ActData[actData.size()];
+
+        System.out.println("arrSort actarr length " + actArr.length);
+
+        for(int i = 0 ; i < actArr.length ; i ++){
+            actArr[i] = new ActData(actData.pop());
+        }
+
+        for (ActData act :
+                actArr) {
+            System.out.println("ACtdata Action: "+ act.getAct() + " actdata X: " + act.getX());
+
+        }
+
+        if(actArr.length > 3){
+            insertionSort(actArr);
+            for (ActData act :
+                    actArr) {
+                System.out.println("Action: "+ act.getAct() + " Distance: " + act.getDistance());
+
+            }
+        }
         return actArr;
     }
 
-    private void mergeSort(ActData[] actArr){
 
-        if(actArr.length > 1){
-            int left = actArr.length / 2;
-            int right = actArr.length - left;
-            ActData[] arrLeft = new ActData[left];
-            ActData[] arrRight = new ActData[right];
-            for(int i = 0; i < left; i++){
-                arrLeft[i] = new ActData(actArr[i]);
-            }
-            System.out.println("Size of arrRight " + arrRight.length);
-            for(int i = 0; i < right; i++) {
-                System.out.println("index: " + (left + i - 1));
-                arrRight[i] = new ActData(actArr[left + i - 1]);
-            }
-            mergeSort(arrLeft);
-            mergeSort(arrRight);
-            merge(arrLeft, arrRight, actArr);
 
+    private void insertionSort(ActData[] actArr){
+        for (ActData act :
+                actArr) {
+            System.out.println("Action: "+ act.getAct() + " Distance: " + act.getDistance());
+
+        }
+        for (int j = 1; j < actArr.length; j++) {
+            System.out.println("Index j is " + j);
+            ActData key = actArr[j];
+            System.out.println("key is action " + key.getAct() + " distance " + key.getDistance());
+            int i = j-1;
+            while ( (i > -1) && ( actArr[i].getDistance() > key.getDistance() ) ) {
+                actArr[i+1] = actArr[i];
+                i--;
+            }
+            actArr[i+1] = key;
         }
     }
 
-    private void merge(ActData[] arrLeft, ActData[] arrRight, ActData[] actArr){
-        int i = 0;
-        int j = 0;
-        while(i < arrLeft.length || j < arrRight.length){
-            if(j >= arrRight.length || (i <arrLeft.length && arrLeft[i].getDistance() < arrRight[j].getDistance())){
-                actArr[i + j].setActData(arrLeft[i]);
-                i++;
-            }
-            else {
-                actArr[i + j].setActData(arrRight[j]);
-                j++;
-            }
-        }
-    }
+    private void predictActsKNN(ActData[] actArr, int threshold) {
+        Action[] actionEnum = Action.values();
+        int maxActionFrequency = 1;
 
-    private void organizeOppActs(ActData[] actArr, int threshold) {
-        Action[] actionArr = Action.values();
-        int frequentActionIndex = 1;
+        //sets the frequency of acts to the values in checkAct[] indexed by Action ordinal
         for(int i = 0; i < threshold; i++){
-            checkAct[actArr[i].getAct().ordinal()]++;
+            actionFreqArr[actArr[i].getAct().ordinal()]++;
         }
 
-        for(int i = 0; i < EnumSet.allOf(Action.class).size(); i++){
-            if(checkAct[i] > frequentActionIndex){
-                oppActs.clear();
-                oppActs.add(actionArr[i]);
-                frequentActionIndex = checkAct[i];
+        //loops through all actions and adds the actions with the most frequent actions to predictedOppActs deque
+        for(int i = 0; i < Action.values().length; i++){
+            if(actionFreqArr[i] > maxActionFrequency){
+                predictedOppActs.clear();
+                predictedOppActs.add(actionEnum[i]);
+                maxActionFrequency = actionFreqArr[i];
             }
-            else if(checkAct[i] == frequentActionIndex){
-                oppActs.add(actionArr[i]);
+            else if(actionFreqArr[i] == maxActionFrequency){
+                predictedOppActs.add(actionEnum[i]);
             }
         }
+
+        for (Action act :
+                predictedOppActs) {
+            System.out.println("OppActs in predictActsKNN is: " + act.name());
+
+        }
+
+
 
     }
     private boolean canProcessing() {

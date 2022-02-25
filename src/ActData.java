@@ -13,10 +13,10 @@ public class ActData {
     }
 
     public ActData(ActData actData){
-        x = actData.x;
-        y = actData.y;
-        distance = actData.distance;
-        act = actData.act;
+        this.x = actData.x;
+        this.y = actData.y;
+        this.distance = actData.distance;
+        this.act = actData.act;
     }
 
     public int getX() {
