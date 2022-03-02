@@ -2,6 +2,7 @@ import aiinterface.AIInterface;
 import aiinterface.CommandCenter;
 import enumerate.Action;
 import enumerate.State;
+import simulator.Simulator;
 import struct.CharacterData;
 import struct.FrameData;
 import struct.GameData;
@@ -17,19 +18,22 @@ public class pootisMizunoAI implements AIInterface {
     private CommandCenter cc;
     private GameData gameData;
     private int characterStates;
+    private Simulator simulator;
 
-    private double kThreshhold = 0.3;
-    private int distThreshold = 3;
-    private int kDistance = 50;
+    private final double kThreshhold = 0.3;
+    private final int distThreshold = 3;
+    private final int kDistance = 50;
 
     private int attackCounter = 0;
 
-    Deque<Action> predictedOppActs;
-    int[] actionFreqArr;
-    int[] actsOccuringFrequency;
+    private Deque<Action> predictedOppActs;
+    private int[] actionFreqArr;
 
-    CharacterData oppData;
-    CharacterData myData;
+    private CharacterData oppData;
+    private CharacterData myData;
+
+    private Deque<Action> groundActions;
+    private Deque<Action> airActions;
 
     private Deque<ActData> oppActAA;
     private Deque<ActData> oppActAG;
@@ -44,12 +48,14 @@ public class pootisMizunoAI implements AIInterface {
         this.inputKey = new Key();
         this.gameData = gameData;
         cc = new CommandCenter();
-        oppActAA = new ArrayDeque<ActData>();
-        oppActAG = new ArrayDeque<ActData>();
-        oppActGG = new ArrayDeque<ActData>();
-        oppActGA = new ArrayDeque<ActData>();
+        oppActAA = new ArrayDeque<>();
+        oppActAG = new ArrayDeque<>();
+        oppActGG = new ArrayDeque<>();
+        oppActGA = new ArrayDeque<>();
         actionFreqArr = new int[EnumSet.allOf(Action.class).size()];
-        this.predictedOppActs = new LinkedList<Action>();
+        this.predictedOppActs = new LinkedList<>();
+        this.simulator = gameData.getSimulator();
+        setCounterGroundAirActions();
 
 
         return 0;
@@ -101,7 +107,38 @@ public class pootisMizunoAI implements AIInterface {
                     if (oppData.getAttack().getAttackType() > 0) {
                         collectData();
                     }
-                    decideAction();
+                    //decideAction();
+
+                    int OGaiHP = myData.getHp();
+                    int OGoppHP = oppData.getHp();
+
+                    //System.out.println("Distance between players: " + frameData.getDistanceX());
+                    if(frameData.getDistanceX() < 125){
+                        Deque<Action> mySimActs = new LinkedList<>();
+                        Deque<Action> oppSimActs = new LinkedList<>();
+                        oppSimActs.add(Action.STAND_A);
+                        int bestScore = 0;
+                        Action bestAction = Action.CROUCH_GUARD;
+                        for (Action act : groundActions) {
+                            mySimActs.clear();
+                            mySimActs.add(act);
+                            FrameData fd = simulator.simulate(frameData, playerNumber, mySimActs, oppSimActs, 60);
+                            CharacterData mySimData = fd.getCharacter(playerNumber);
+                            CharacterData oppSimData = fd.getCharacter(!playerNumber);
+                            int tempScore = (mySimData.getHp() - OGaiHP) - (oppSimData.getHp() - OGoppHP);
+                            System.out.println(act.name() + " got a score of " + tempScore);
+
+                            if(tempScore > bestScore){
+                                bestAction = act;
+                                bestScore = tempScore;
+                            }
+                        }
+                        System.out.println(bestAction.name() + " is the best counter action with a score of " + bestScore);
+
+
+
+
+                    }
                 /*else if(oppData.getAttack().getAttackType() == 1){
                     System.out.println("Opponent threw a HIGH attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
                     System.out.println(oppData.getState());
@@ -204,7 +241,7 @@ public class pootisMizunoAI implements AIInterface {
         int relativeX = frameData.getDistanceX();
         int relativeY = frameData.getDistanceY();
 
-        Deque<ActData> actData = null;
+        Deque<ActData> actData;
         switch(characterStates) {
             case 1:
                 actData = oppActGG;
@@ -244,7 +281,7 @@ public class pootisMizunoAI implements AIInterface {
      *
      * @return returns 1 if both characters is on the ground, 2 if the player is on the ground and opponent in the air, 3 if player is in the air and opponent on the ground and 4 if both are in the air
      */
-    public int checkPosition() {
+    private int checkPosition() {
         if(myData.getState().equals(State.STAND) || myData.getState().equals(State.STAND) && oppData.getState().equals(State.STAND) || oppData.getState().equals(State.STAND)){
             return 1;
         }
@@ -264,9 +301,9 @@ public class pootisMizunoAI implements AIInterface {
         return -1;
     }
 
-    public boolean calculateDist(Deque<ActData> actData, int relativeX, int relativeY) {
+    private boolean calculateDist(Deque<ActData> actData, int relativeX, int relativeY) {
         int actdataThreshold = (int)(actData.size() * kThreshhold + 1);
-        Deque<ActData> temp = new LinkedList<ActData>();
+        Deque<ActData> temp = new LinkedList<>();
         ActData[] actArr;
         for (ActData actDataI :
                 actData) {
@@ -288,7 +325,7 @@ public class pootisMizunoAI implements AIInterface {
 
         }
 
-        for (ActData act :
+        /*for (ActData act :
                 temp) {
             System.out.println("Action: " + act.getAct() + " X: " + act.getX());
         }
@@ -299,7 +336,7 @@ public class pootisMizunoAI implements AIInterface {
                 actData) {
             System.out.println("ACtdata Action: "+ act.getAct() + " actdata X: " + act.getX());
 
-        }
+        }*/
 
         actArr = arrSort(temp);
 
@@ -312,25 +349,25 @@ public class pootisMizunoAI implements AIInterface {
         //moved this from calculateDist() and it miraculously worked
         ActData[] actArr = new ActData[actData.size()];
 
-        System.out.println("arrSort actarr length " + actArr.length);
+        //System.out.println("arrSort actarr length " + actArr.length);
 
         for(int i = 0 ; i < actArr.length ; i ++){
             actArr[i] = new ActData(actData.pop());
         }
 
-        for (ActData act :
+        /*for (ActData act :
                 actArr) {
             System.out.println("ACtdata Action: "+ act.getAct() + " actdata X: " + act.getX());
 
-        }
+        }*/
 
         if(actArr.length > 3){
             insertionSort(actArr);
-            for (ActData act :
+            /*for (ActData act :
                     actArr) {
                 System.out.println("Action: "+ act.getAct() + " Distance: " + act.getDistance());
 
-            }
+            }*/
         }
         return actArr;
     }
@@ -338,15 +375,15 @@ public class pootisMizunoAI implements AIInterface {
 
 
     private void insertionSort(ActData[] actArr){
-        for (ActData act :
+        /*for (ActData act :
                 actArr) {
             System.out.println("Action: "+ act.getAct() + " Distance: " + act.getDistance());
 
-        }
+        }*/
         for (int j = 1; j < actArr.length; j++) {
-            System.out.println("Index j is " + j);
+            //System.out.println("Index j is " + j);
             ActData key = actArr[j];
-            System.out.println("key is action " + key.getAct() + " distance " + key.getDistance());
+            //System.out.println("key is action " + key.getAct() + " distance " + key.getDistance());
             int i = j-1;
             while ( (i > -1) && ( actArr[i].getDistance() > key.getDistance() ) ) {
                 actArr[i+1] = actArr[i];
@@ -383,6 +420,38 @@ public class pootisMizunoAI implements AIInterface {
 
         }
 
+
+
+    }
+
+    private void setCounterGroundAirActions() {
+        groundActions = new LinkedList<>();
+        airActions = new LinkedList<>();
+        groundActions.add(Action.JUMP);
+        groundActions.add(Action.FOR_JUMP);
+        groundActions.add(Action.BACK_JUMP);
+        groundActions.add(Action.THROW_A);
+        groundActions.add(Action.THROW_B);
+        groundActions.add(Action.STAND_A);
+        groundActions.add(Action.CROUCH_A);
+        groundActions.add(Action.STAND_FA);
+        groundActions.add(Action.CROUCH_FA);
+        groundActions.add(Action.STAND_D_DF_FA);
+        groundActions.add(Action.STAND_D_DF_FB);
+        groundActions.add(Action.STAND_F_D_DFA);
+        groundActions.add(Action.STAND_F_D_DFB);
+        groundActions.add(Action.STAND_D_DB_BA);
+        groundActions.add(Action.STAND_D_DB_BB);
+        groundActions.add(Action.STAND_D_DF_FC);
+
+        airActions.add(Action.AIR_GUARD);
+        airActions.add(Action.AIR_A);
+        airActions.add(Action.AIR_DA);
+        airActions.add(Action.AIR_FA);
+        airActions.add(Action.AIR_UA);
+        airActions.add(Action.AIR_D_DF_FA);
+        airActions.add(Action.AIR_F_D_DFA);
+        airActions.add(Action.AIR_D_DB_BA);
 
 
     }
