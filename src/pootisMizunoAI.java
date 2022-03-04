@@ -21,8 +21,8 @@ public class pootisMizunoAI implements AIInterface {
     private Simulator simulator;
 
     private final double kThreshhold = 0.3;
-    private final int distThreshold = 3;
-    private final int kDistance = 50;
+    private final int distThreshold = 2;
+    private final int kDistance = 100;
 
     private int attackCounter = 0;
 
@@ -107,82 +107,54 @@ public class pootisMizunoAI implements AIInterface {
                     if (oppData.getAttack().getAttackType() > 0) {
                         collectData();
                     }
-                    //decideAction();
+                    decideAction();
 
                     int OGaiHP = myData.getHp();
                     int OGoppHP = oppData.getHp();
 
-                    //System.out.println("Distance between players: " + frameData.getDistanceX());
-                    if(frameData.getDistanceX() < 125){
-                        Deque<Action> mySimActs = new LinkedList<>();
-                        Deque<Action> oppSimActs = new LinkedList<>();
-                        oppSimActs.add(Action.STAND_A);
+
+                    Deque<Action> actionsToSimulate = (myData.getState() == State.STAND || myData.getState() == State.CROUCH) ? groundActions : airActions;
+                    System.out.println("Distance between players: " + frameData.getDistanceX());
+                    System.out.println("AI STATE IS " + myData.getState());
+                    if(frameData.getDistanceX() < 200){
                         int bestScore = 0;
                         Action bestAction = Action.CROUCH_GUARD;
-                        for (Action act : groundActions) {
-                            mySimActs.clear();
-                            mySimActs.add(act);
-                            FrameData fd = simulator.simulate(frameData, playerNumber, mySimActs, oppSimActs, 60);
-                            CharacterData mySimData = fd.getCharacter(playerNumber);
-                            CharacterData oppSimData = fd.getCharacter(!playerNumber);
-                            int tempScore = (mySimData.getHp() - OGaiHP) - (oppSimData.getHp() - OGoppHP);
-                            System.out.println(act.name() + " got a score of " + tempScore);
+                        Deque<Action> mySimActs = new LinkedList<>();
+                        Deque<Action> oppSimActs = new LinkedList<>();
 
-                            if(tempScore > bestScore){
-                                bestAction = act;
-                                bestScore = tempScore;
+                        for (Action predictedAction : predictedOppActs) {
+                            System.out.println("Simulating best attack against " + predictedAction.name());
+                            for (Action act : actionsToSimulate) {
+                                mySimActs.clear();
+                                mySimActs.add(act);
+                                FrameData fd = simulator.simulate(frameData, playerNumber, mySimActs, oppSimActs, 60);
+                                CharacterData mySimData = fd.getCharacter(playerNumber);
+                                CharacterData oppSimData = fd.getCharacter(!playerNumber);
+                                int tempScore = (mySimData.getHp() - OGaiHP) - (oppSimData.getHp() - OGoppHP);
+                                System.out.println(act.name() + " got a score of " + tempScore);
+
+                                if(tempScore > bestScore){
+                                    bestAction = act;
+                                    bestScore = tempScore;
+                                }
                             }
                         }
                         System.out.println(bestAction.name() + " is the best counter action with a score of " + bestScore);
-
-
-
+                        cc.commandCall(bestAction.name());
+                    }
+                    //if AI is way to far from the opponent
+                    else{
+                        if(myData.getEnergy() >= 35){
+                            action = Action.STAND_D_DF_FB;
+                        }
+                        else if(myData.getEnergy() >= 5){
+                            action = Action.STAND_D_DF_FA;
+                        }
 
                     }
-                /*else if(oppData.getAttack().getAttackType() == 1){
-                    System.out.println("Opponent threw a HIGH attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
-                    System.out.println(oppData.getState());
-                }
-                else if(oppData.getAttack().getAttackType() == 2){
-                    System.out.println("Opponent threw a MID attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
-                    System.out.println(oppData.getState());
-                }
-                else if(oppData.getAttack().getAttackType() == 3){
-                    System.out.println("Opponent threw a LOW attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
-                    System.out.println(oppData.getState());
-                }
-                else if(oppData.getAttack().getAttackType() == 4){
-                    System.out.println("Opponent threw a THROW attack at relative pos X:" + frameData.getDistanceX() + " pos Y" + frameData.getDistanceY());
-                    System.out.println(oppData.getState());
-                }
-
-                if(myData.getEnergy() > 150){
-                    System.out.println("Throwing big boi fireball");
-                    cc.commandCall("STAND_D_DF_FC");
-                }
-
-
-                if(frameData.getDistanceX() < 100) {
-                     //System.out.println("Throwing kick");
-                     //cc.commandCall("B");
-                }
-                else if(frameData.getDistanceX() > 300){
-                    if(myData.getEnergy() > 50) {
-                        System.out.println("Throwing fireball");
-                        cc.commandCall("STAND_D_DF_FB");
-                    }
-
-                }
-                else {
-                    //cc.commandCall("6");
-                    //inputKey = cc.getSkillKey();
-
-                }*/
-
 
                     cc.commandCall(action.name());
                     inputKey = cc.getSkillKey();
-
                 }
             }
         }
@@ -261,19 +233,9 @@ public class pootisMizunoAI implements AIInterface {
                 System.out.println("UNEXPECTED VALUE " + characterStates);
                 return;
         }
-        int count = 0;
-        if(actData.size() != 0){
-            System.out.println("actdata is of size " + actData.size());
-        /*for (int i = 0; i < actData.size(); i++){
 
-
-        }*/
             boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
             System.out.println("Is Opponent Going To Attack? " + isOpponentGoingToAttack);
-            System.out.println("OppActs size: " + predictedOppActs.size());
-        }
-
-
     }
 
 
@@ -325,25 +287,12 @@ public class pootisMizunoAI implements AIInterface {
 
         }
 
-        /*for (ActData act :
-                temp) {
-            System.out.println("Action: " + act.getAct() + " X: " + act.getX());
-        }
-
-
-
-        for (ActData act :
-                actData) {
-            System.out.println("ACtdata Action: "+ act.getAct() + " actdata X: " + act.getX());
-
-        }*/
 
         actArr = arrSort(temp);
 
         predictActsKNN(actArr, Math.min(actdataThreshold, distThreshold));
 
         return true;
-
     }
     private ActData[] arrSort(Deque<ActData> actData){
         //moved this from calculateDist() and it miraculously worked
