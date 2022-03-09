@@ -112,11 +112,13 @@ public class pootisMizunoAI implements AIInterface {
                     if (oppData.getAttack().getAttackType() > 0) {
                         collectData();
                     }
+                    int OGaiHP = myData.getHp();
+                    int OGoppHP = oppData.getHp();
                     decideAction();
+                    /*
                     if(isAirAttacking == false){
                         if(frameData.getDistanceX() < 165){
-                            int OGaiHP = myData.getHp();
-                            int OGoppHP = oppData.getHp();
+
                             Deque<Action> actionsToSimulate = (myData.getState() == State.STAND || myData.getState() == State.CROUCH) ? groundActions : airActions;
                             //System.out.println("Distance between players: " + frameData.getDistanceX());
                             System.out.println("AI STATE IS " + myData.getState());
@@ -198,99 +200,106 @@ public class pootisMizunoAI implements AIInterface {
                             System.out.println("jumping");
                         }
 
-                    }
-                        /*if(hasJumped == false){
-                            cc.commandCall("JUMP");
-                            System.out.println("jumping");
-                        }
-                        else{
-                            
-
-                            cc.commandCall(airAttackAction.name());
-                            System.out.println("attacking " + airAttackAction.name());
-                            isAirAttacking = false;
-
-                        }
                     }*/
 
-                    /*if(isAirAttacking == false){
+                    int bestScore = 0;
+                    Action bestAction = Action.CROUCH_GUARD;
+                    if(isAirAttacking == false){
+                        Deque<Action> actionsToSimulate = (myData.getState() == State.STAND || myData.getState() == State.CROUCH) ? groundActions : airActions;
                         if(frameData.getDistanceX() < 165){
                             Deque<Action> mySimActs = new LinkedList<>();
                             Deque<Action> oppSimActs = new LinkedList<>();
-                            oppSimActs.add(Action.STAND_A);
-                            int bestScore = 0;
-                            Action bestAction = Action.CROUCH_GUARD;
-
-                            for (Action act :
-                                    groundActions) {
-                                System.out.println("Testing attack " + act.name());
-                                if(checkEnergyForAttack(act) == false){
-                                    System.out.println("AI doesn't have enough energy to throw " + act.name());
-                                    continue;
+                            for (Action predictedAction :
+                                    predictedOppActs) {
+                                oppSimActs.clear();
+                                if(predictedAction.name().matches("(.*)AIR(.*)")){
+                                    oppSimActs.add(Action.JUMP);
                                 }
-                                System.out.println("AI has energy to throw " + act.name());
-                                mySimActs.clear();
-                                //System.out.println("Does " + act.name() + " match a air move? " +  act.name().matches("(.*)AIR(.*)"));
-                                if(act.name().matches("(.*)AIR(.*)")){
-                                    System.out.println("Adding jump");
-                                    mySimActs.add(Action.JUMP);
-                                }
-
-                                mySimActs.add(act);
-                                if(act == Action.STAND_GUARD){
-                                    System.out.println("Adding stand guard recov");
-                                    mySimActs.add(Action.STAND_GUARD_RECOV);
-                                }
-                                else if (act == Action.CROUCH_GUARD){
-                                    System.out.println("Adding crouch guard recov");
-                                    mySimActs.add(Action.CROUCH_GUARD_RECOV);
-                                }
+                                oppSimActs.add(predictedAction);
+                                System.out.println("Simulating best attack against " + predictedAction.name());
                                 for (Action simAct :
-                                        mySimActs) {
-                                    System.out.println(simAct.name());
-                                }
-                                FrameData fd = simulator.simulate(frameData, playerNumber, mySimActs, oppSimActs, 60);
-                                CharacterData mySimData = fd.getCharacter(playerNumber);
-                                CharacterData oppSimData = fd.getCharacter(!playerNumber);
-                                System.out.println("After simulation AI HP:" + mySimData.getHp() + " opp HP: " + oppSimData.getHp());
-                                int tempScore = (mySimData.getHp() - OGaiHP) - (oppSimData.getHp() - OGoppHP);
-                                System.out.println(act.name() + " got a score of " + tempScore);
-                                if(tempScore > bestScore){
-                                    bestAction = act;
-                                    bestScore = tempScore;
+                                        actionsToSimulate) {
+                                    System.out.println("Testing counter attack " + simAct.name());
+                                    if(checkEnergyForAttack(simAct) == false){
+                                        System.out.println("AI doesn't have enough energy to throw " + simAct.name());
+                                        continue;
+                                    }
+                                    System.out.println("AI has energy to throw " + simAct.name());
+                                    mySimActs.clear();
+                                    //System.out.println("Does " + act.name() + " match a air move? " +  act.name().matches("(.*)AIR(.*)"));
+                                    if(simAct.name().matches("(.*)AIR(.*)")){
+                                        //System.out.println("Adding jump");
+                                        mySimActs.add(Action.JUMP);
+                                    }
+
+                                    mySimActs.add(simAct);
+                                    if(simAct == Action.STAND_GUARD){
+                                        //System.out.println("Adding stand guard recov");
+                                        mySimActs.add(Action.STAND_GUARD_RECOV);
+                                    }
+                                    else if (simAct == Action.CROUCH_GUARD){
+                                        //System.out.println("Adding crouch guard recov");
+                                        mySimActs.add(Action.CROUCH_GUARD_RECOV);
+                                    }
+                                    //System.out.println("DOuble check AI: " + mySimActs.peekFirst() + " " + mySimActs.peekLast());
+                                    //System.out.println("DOuble check OPp: " + oppSimActs.peekFirst() + " " + oppSimActs.peekLast());
+                                    FrameData fd = simulator.simulate(frameData, playerNumber, mySimActs, oppSimActs, 60);
+                                    CharacterData mySimData = fd.getCharacter(playerNumber);
+                                    CharacterData oppSimData = fd.getCharacter(!playerNumber);
+                                    //System.out.println("After simulation AI HP:" + mySimData.getHp() + " opp HP: " + oppSimData.getHp());
+                                    int tempScore = (mySimData.getHp() - OGaiHP) - (oppSimData.getHp() - OGoppHP);
+                                    System.out.println(simAct.name() + " got a score of " + tempScore);
+                                    if(tempScore > bestScore){
+                                        bestAction = simAct;
+                                        bestScore = tempScore;
+                                    }
+
                                 }
 
                             }
                             if(bestAction.name().matches("(.*)AIR(.*)")){
                                 isAirAttacking = true;
                                 airAttackAction = bestAction;
+                                System.out.println("it is a air attack");
                             }
                             else{
+                                System.out.println("Attacking withc attack " + bestAction.name());
                                 cc.commandCall(bestAction.name());
                             }
-                            System.out.println(bestAction.name() + " is the best counter action with a score of " + bestScore);
+                            System.out.println(bestAction.name() + " IS THE BEST COUNTER ACTION TO " + predictedOppActs.peek() +   " WITH A SCORE OF " + bestScore);
 
-                            else if(Math.abs(airAttackCount - frameData.getFramesNumber()) > 0){
-                            airAttackCount = 0;
-
-                        }/*
+                        }
+                        //if AI is way to far from the opponent
+                        else{
+                            /*if(myData.getEnergy() >= 35){
+                                action = Action.STAND_D_DF_FB;
+                            }
+                            else if(myData.getEnergy() >= 5){
+                                action = Action.STAND_D_DF_FA;
+                            }*/
+                            if(myData.getEnergy() >= 150){
+                                cc.commandCall("STAND_D_DF_FC");
+                            }
 
                         }
 
                     }
                     else{
-                        if(myData.getState() == State.AIR){
-                            //cc.commandCall(airAttackInProgress.name());
-                            System.out.println("attacking " + airAttackAction.name());
-                            isAirAttacking = false;
-                        }
-                        else{
+                        System.out.println("Airattack Frames inside else: " + airAttackFramesCount);
+                        if (airAttackFramesCount == 0){
+                            airAttackFramesCount = frameData.getFramesNumber();
                             cc.commandCall("JUMP");
                             System.out.println("jumping");
-                            isAirAttacking = false;
 
                         }
-                    }*/
+                        else if(Math.abs(airAttackFramesCount - frameData.getFramesNumber()) > 42){
+                            cc.commandCall(airAttackAction.name());
+                            System.out.println("attacking " + airAttackAction.name());
+                            isAirAttacking = false;
+                            airAttackFramesCount = 0;
+                        }
+
+                    }
 
                     //cc.commandCall(action.name());
                     //inputKey = cc.getSkillKey();
@@ -317,7 +326,6 @@ public class pootisMizunoAI implements AIInterface {
                 oppActGG) {
             System.out.println(act.getAct());
         }
-        System.out.println("Size of predictedOppActs " + predictedOppActs.size());
 
     }
 
@@ -374,9 +382,8 @@ public class pootisMizunoAI implements AIInterface {
                 return false;
         }
 
-            boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
-            System.out.println("Is Opponent Going To Attack? " + isOpponentGoingToAttack);
-            return isOpponentGoingToAttack;
+        boolean isOpponentGoingToAttack = calculateDist(actData, relativeX, relativeY);
+        return isOpponentGoingToAttack;
     }
 
 
@@ -400,7 +407,6 @@ public class pootisMizunoAI implements AIInterface {
         if(myData.getState().equals(State.AIR) && oppData.getState().equals(State.AIR)){
             return 4;
         }
-        System.out.println("AI state is " + myData.getState() + " Player state is " + oppData.getState());
         return -1;
     }
 
@@ -506,7 +512,6 @@ public class pootisMizunoAI implements AIInterface {
 
         for (Action act :
                 predictedOppActs) {
-            System.out.println("OppActs in predictActsKNN is: " + act.name());
 
         }
 
@@ -531,8 +536,8 @@ public class pootisMizunoAI implements AIInterface {
         groundActions.add(Action.CROUCH_A);
         groundActions.add(Action.STAND_FA);
         groundActions.add(Action.CROUCH_FA);
-        //groundActions.add(Action.STAND_D_DF_FA);
-        //groundActions.add(Action.STAND_D_DF_FB);
+        groundActions.add(Action.STAND_D_DF_FA);
+        groundActions.add(Action.STAND_D_DF_FB);
         groundActions.add(Action.STAND_F_D_DFA);
         groundActions.add(Action.STAND_F_D_DFB);
         groundActions.add(Action.STAND_D_DB_BA);
