@@ -21,7 +21,7 @@ public class pootisMizunoAI implements AIInterface {
     private Simulator simulator;
 
     private final double kThreshhold = 0.3;
-    private final int distThreshold = 2;
+    private final int distThreshold = 3;
     private final int kDistance = 100;
 
     private boolean isAirAttacking = false;
@@ -206,7 +206,7 @@ public class pootisMizunoAI implements AIInterface {
                     Action bestAction = Action.CROUCH_GUARD;
                     if(isAirAttacking == false){
                         Deque<Action> actionsToSimulate = (myData.getState() == State.STAND || myData.getState() == State.CROUCH) ? groundActions : airActions;
-                        if(frameData.getDistanceX() < 165){
+                        if(frameData.getDistanceX() < 200){
                             Deque<Action> mySimActs = new LinkedList<>();
                             Deque<Action> oppSimActs = new LinkedList<>();
                             for (Action predictedAction :
@@ -392,7 +392,7 @@ public class pootisMizunoAI implements AIInterface {
      * @return returns 1 if both characters is on the ground, 2 if the player is on the ground and opponent in the air, 3 if player is in the air and opponent on the ground and 4 if both are in the air
      */
     private int checkPosition() {
-        if(myData.getState().equals(State.STAND) || myData.getState().equals(State.STAND) && oppData.getState().equals(State.STAND) || oppData.getState().equals(State.STAND)){
+        if(myData.getState().equals(State.STAND) || myData.getState().equals(State.CROUCH) && oppData.getState().equals(State.STAND) || oppData.getState().equals(State.CROUCH)){
             return 1;
         }
 
@@ -400,7 +400,7 @@ public class pootisMizunoAI implements AIInterface {
             return 2;
         }
 
-        if(myData.getState().equals(State.AIR) && oppData.getState().equals(State.STAND)){
+        if(myData.getState().equals(State.AIR) && oppData.getState().equals(State.STAND) || oppData.getState().equals(State.CROUCH)){
             return 3;
         }
 
