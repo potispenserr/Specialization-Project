@@ -26,7 +26,6 @@ public class pootisMizunoAI implements AIInterface {
 
     private boolean isAirAttacking = false;
     private Action airAttackAction;
-    private boolean hasJumped = false;
     private int airAttackFramesCount = 0;
 
     private Deque<Action> predictedOppActs;
@@ -205,7 +204,7 @@ public class pootisMizunoAI implements AIInterface {
                     int bestScore = 0;
                     Action bestAction = Action.CROUCH_GUARD;
                     if(isAirAttacking == false){
-                        Deque<Action> actionsToSimulate = (myData.getState() == State.STAND || myData.getState() == State.CROUCH) ? groundActions : airActions;
+                        Deque<Action> actionsToSimulate = groundActions;
                         if(frameData.getDistanceX() < 200){
                             Deque<Action> mySimActs = new LinkedList<>();
                             Deque<Action> oppSimActs = new LinkedList<>();
@@ -280,6 +279,9 @@ public class pootisMizunoAI implements AIInterface {
                             if(myData.getEnergy() >= 150){
                                 cc.commandCall("STAND_D_DF_FC");
                             }
+                            else{
+                                cc.commandCall("STAND_D_DB_BA");
+                            }
 
                         }
 
@@ -292,7 +294,7 @@ public class pootisMizunoAI implements AIInterface {
                             System.out.println("jumping");
 
                         }
-                        else if(Math.abs(airAttackFramesCount - frameData.getFramesNumber()) > 42){
+                        else if(Math.abs(airAttackFramesCount - frameData.getFramesNumber()) > 37){
                             cc.commandCall(airAttackAction.name());
                             System.out.println("attacking " + airAttackAction.name());
                             isAirAttacking = false;
@@ -552,14 +554,14 @@ public class pootisMizunoAI implements AIInterface {
         groundActions.add(Action.AIR_FB);
         groundActions.add(Action.AIR_UA);
 
-        airActions.add(Action.AIR_GUARD);
-        airActions.add(Action.AIR_A);
-        airActions.add(Action.AIR_DA);
-        airActions.add(Action.AIR_FA);
-        airActions.add(Action.AIR_UA);
-        airActions.add(Action.AIR_D_DF_FA);
-        airActions.add(Action.AIR_F_D_DFA);
-        airActions.add(Action.AIR_D_DB_BA);
+        groundActions.add(Action.AIR_GUARD);
+        groundActions.add(Action.AIR_A);
+        groundActions.add(Action.AIR_DA);
+        groundActions.add(Action.AIR_FA);
+        groundActions.add(Action.AIR_UA);
+        groundActions.add(Action.AIR_D_DF_FA);
+        groundActions.add(Action.AIR_F_D_DFA);
+        groundActions.add(Action.AIR_D_DB_BA);
 
 
     }
